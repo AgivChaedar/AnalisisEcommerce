@@ -72,7 +72,8 @@ def classify_review(score):
     else:
         return 'Puas'
 
-df = pd.read_csv("C:/Users/agivc/Documents/PELATIHAN IDCAMP DATA SCIENTIST/Proyek Analisis Data (E-Commerce)/e-commerce_analysis.csv")
+# df = pd.read_csv("C:/Users/agivc/Documents/PELATIHAN IDCAMP DATA SCIENTIST/Proyek Analisis Data (E-Commerce)/e-commerce_analysis.csv")
+df = pd.read_csv("e-commerce_analysis.csv")
 df['order_purchase_timestamp'] = pd.to_datetime(df['order_purchase_timestamp'])
 top_products = cre_top_products(df)
 last_transaction_date, reference_date = cre_last_transcation(df)

@@ -8,16 +8,15 @@ sns.set(style='dark')
 def cre_top_products(df):
     # Kelompokkan berdasarkan product_id untuk hitung total transaksi
     top_products = (
-        df.groupby('product_category_name')
-        .agg(
-            total_sold=('order_id', 'size'),  # Hitung total transaksi per produk
-            avg_price=('price', 'mean'),       # Rata-rata harga produk
-            city=('customer_city', 'first'),       # Contoh kota pembeli
-            review=('review_comment_message', 'first')  # Contoh review
-        )
-        .sort_values(by='total_sold', ascending=False)  # Urutkan berdasarkan total penjualan
-        .reset_index()
+    df.groupby('product_category_name')
+    .agg(
+        total_sold=('order_id', 'size'),  # Hitung total transaksi per produk
+        avg_price=('price', 'mean'),       # Rata-rata harga produk
     )
+    .sort_values(by='total_sold', ascending=False)  # Urutkan berdasarkan total penjualan
+    .reset_index()
+    .nlargest(10, 'total_sold')
+)
     return top_products
 
 def cre_last_transcation(df):
@@ -76,7 +75,14 @@ def classify_review(score):
 df = pd.read_csv("e-commerce_analysis.csv")
 df['order_purchase_timestamp'] = pd.to_datetime(df['order_purchase_timestamp'])
 top_products = cre_top_products(df)
+#Menghitung tren penjualan produk terlaris
+categories = top_products['product_category_name'].tolist()
+
+# Konversi kolom tanggal jika belum dilakukan
+df['order_purchase_month'] = pd.to_datetime(df['order_purchase_timestamp']).dt.to_period('M')
+
 last_transaction_date, reference_date = cre_last_transcation(df)
+
 rfm = cre_rfm(df)
 df['satisfaction_category'] = df['review_score'].apply(classify_review)
 satisfaction_distribution = df['satisfaction_category'].value_counts(normalize=True) * 100
@@ -88,18 +94,33 @@ st.header('E-Commerce Analysis')
 st.caption('Proyek Akhir Kelas Data Analisis Dicoding')
 
 st.subheader('Produk Paling Laris dan Tidak Laris Terjual')
+# Pilihan jumlah data yang ingin ditampilkan
+num_products = st.slider("Pilih jumlah produk untuk ditampilkan", min_value=1, max_value=len(top_products), value=5)
 
+# Plot grafik
 fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(30, 15))
 
-head_data = 5
-colors = ["#72BCD4" if i == 0 else "#D3D3D3" for i in range(head_data)]
-sns.barplot(x="total_sold", y="product_category_name", data=top_products.head(head_data), palette=colors, ax=ax[0]) #ax[0] berarti gambar diletakkan di canvas kiri
+# Plot Best Performing Product
+sns.barplot(
+    x="total_sold", 
+    y="product_category_name", 
+    data=top_products.head(num_products), 
+    palette='viridis', 
+    ax=ax[0]
+)
 ax[0].set_ylabel(None)
 ax[0].set_xlabel(None)
 ax[0].set_title("Best Performing Product", loc="center", fontsize=25)
-ax[0].tick_params(axis ='y', labelsize=20)
+ax[0].tick_params(axis='y', labelsize=20)
 
-sns.barplot(x="total_sold", y="product_category_name", data=top_products.sort_values(by="total_sold", ascending=True).head(head_data), palette=colors, ax=ax[1]) #ax[1] berarti gambar diletakkan di canvas kanan
+# Plot Worst Performing Product
+sns.barplot(
+    x="total_sold", 
+    y="product_category_name", 
+    data=top_products.sort_values(by="total_sold", ascending=True).head(num_products), 
+    palette='viridis', 
+    ax=ax[1]
+)
 ax[1].set_ylabel(None)
 ax[1].set_xlabel(None)
 ax[1].invert_xaxis()
@@ -107,7 +128,26 @@ ax[1].yaxis.set_label_position("right")
 ax[1].yaxis.tick_right()
 ax[1].set_title("Worst Performing Product", loc="center", fontsize=25)
 ax[1].tick_params(axis='y', labelsize=20)
+
+# Tampilkan plot
 st.pyplot(fig)
+
+st.subheader('Tren Penjualan 10 Produk Terlaris')
+# Memilih kategori produk
+selected_category = st.selectbox('Pilih Kategori Produk', categories)
+#Filter tren penjualan bulanan untuk kategori yang dipilih
+trend = df[df['product_category_name'] == selected_category] \
+    .groupby('order_purchase_month')['order_id'].size()
+# Plot tren penjualan
+fig, ax = plt.subplots(figsize=(18, 6))
+trend.plot(marker='o', title=f'Tren Penjualan Bulanan: {selected_category}', ax=ax)
+plt.ylabel('Total Penjualan')
+plt.xlabel('Bulan')
+plt.grid(True)
+
+# Tampilkan plot
+st.pyplot(fig)
+
 
 st.subheader('Distribusi Transaksi Pelanggan Berdasarkan Recency')
 # Tentukan ambang batas Recency untuk segmentasi

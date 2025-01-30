@@ -1,5 +1,5 @@
 babel
-matplotib
+matplotlib
 pandas
 numpy
 seaborn
